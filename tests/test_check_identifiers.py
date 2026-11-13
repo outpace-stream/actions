@@ -50,6 +50,17 @@ class CheckIdentifiers(unittest.TestCase):
         self.assertEqual(r.returncode, 1, r.stderr)
         self.assertIn("notes.md:1", r.stderr)
 
+    def test_value_is_redacted_in_report(self):
+        self.write("notes.md", f"id {REAL}\n")
+        r = self.run_script()
+        self.assertNotIn(REAL, r.stderr + r.stdout)
+        self.assertIn(REAL[:4], r.stderr)
+
+    def test_non_ascii_path_is_scanned(self):
+        self.write("caf\u00e9.md", f"id {REAL}\n")
+        self.assertEqual(self.run_script().returncode, 1)
+        self.assertEqual(self.run_script("--staged").returncode, 1)
+
     def test_placeholder_passes(self):
         self.write("notes.md", f"id {PLACEHOLDER}\n")
         self.assertEqual(self.run_script().returncode, 0)

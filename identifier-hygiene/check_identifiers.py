@@ -115,15 +115,16 @@ def load_allowlist(allowlist: str) -> set:
 
 
 def staged_files() -> list:
+    # -z: NUL-separated, unquoted paths, so non-ASCII names are not skipped.
     out = subprocess.run(
-        ["git", "diff", "--cached", "--name-only", "--diff-filter=ACMR"],
-        capture_output=True, text=True).stdout.split("\n")
+        ["git", "diff", "--cached", "--name-only", "-z", "--diff-filter=ACMR"],
+        capture_output=True, text=True).stdout.split("\0")
     return [f for f in out if f]
 
 
 def tracked_files() -> list:
-    out = subprocess.run(["git", "ls-files"], capture_output=True, text=True).stdout
-    return [f for f in out.split("\n") if f]
+    out = subprocess.run(["git", "ls-files", "-z"], capture_output=True, text=True).stdout
+    return [f for f in out.split("\0") if f]
 
 
 def read_blob(path: str, staged: bool) -> bytes:
@@ -207,7 +208,9 @@ def main() -> int:
     print("AceStream identifier hygiene check FAILED\n", file=sys.stderr)
     for path, lineno, val, why in findings:
         loc = f"{path}:{lineno}" if lineno else path
-        show = val if val in ("REGISTRY",) else val
+        # Redacted: CI logs of public repositories are public, so the failure
+        # report must not republish the value it is blocking.
+        show = val if val == "REGISTRY" else f"{val[:4]}...{val[-4:]} (redacted)"
         print(f"  {loc}: {why}\n      {show}", file=sys.stderr)
     print(
         "\nContent ids, infohashes, and stream names must never enter tracked\n"
