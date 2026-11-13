@@ -1,0 +1,27 @@
+name: AceStream identifier hygiene
+description: >-
+  Fail-closed scan of a repository's tracked files for real AceStream content
+  ids and infohashes, and a hard block on committing the private
+  acestream-ids.txt registry.
+
+inputs:
+  allowlist:
+    description: >-
+      Allowlist path relative to the repository root. A missing file means an
+      empty allowlist.
+    required: false
+    default: tools/hygiene/allowed-identifiers.txt
+  working-directory:
+    description: Directory inside the git checkout to scan from.
+    required: false
+    default: .
+
+runs:
+  using: composite
+  steps:
+    - name: Scan tracked files for real AceStream identifiers
+      shell: bash
+      working-directory: ${{ inputs.working-directory }}
+      env:
+        HYGIENE_ALLOWLIST: ${{ inputs.allowlist }}
+      run: python3 "$GITHUB_ACTION_PATH/check_identifiers.py" --allowlist "$HYGIENE_ALLOWLIST"
